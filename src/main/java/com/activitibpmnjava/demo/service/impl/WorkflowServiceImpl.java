@@ -7,6 +7,7 @@ import com.activitibpmnjava.demo.io.entity.ApplicationWorkflow;
 import com.activitibpmnjava.demo.io.entity.QApplicationWorkflow;
 import com.activitibpmnjava.demo.io.repo.AppWorkflowRepository;
 import com.activitibpmnjava.demo.service.WorkflowService;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import org.activiti.engine.HistoryService;
 import org.activiti.engine.RuntimeService;
 import org.activiti.engine.TaskService;
@@ -16,12 +17,17 @@ import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.task.Task;
 import org.apache.commons.lang3.StringUtils;
 import org.modelmapper.ModelMapper;
+import org.modelmapper.TypeToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -137,6 +143,32 @@ public class WorkflowServiceImpl implements WorkflowService {
                 workflowRepo.save(wf);
             }, () -> System.out.println("Workflow is not available! ") );
         }
+    }
+
+    @Override
+    public List<AppResponse> findSearchTickets(String taskId, String transCode, String userName, int page, int limit) {
+        page =  page>0 ? page-1 : page;
+        Pageable pageableRequest = PageRequest.of(page,limit);
+        if (taskId == null) taskId = "";
+        if (transCode == null) transCode = "";
+        if (userName == null) userName = "";
+        BooleanExpression pred;
+        if (taskId.length() > 0)
+            pred = QApplicationWorkflow.applicationWorkflow.wfTaskId.contains(taskId)
+                    .and(QApplicationWorkflow.applicationWorkflow.wfActive.eq(true));
+        else if (transCode.length() > 0)
+            pred = QApplicationWorkflow.applicationWorkflow.wfCurrTrans.contains(transCode)
+                    .and(QApplicationWorkflow.applicationWorkflow.wfActive.eq(true));
+        else if (userName.length() > 0)
+            pred = QApplicationWorkflow.applicationWorkflow.wfUserId.contains(userName)
+                    .and(QApplicationWorkflow.applicationWorkflow.wfActive.eq(true));
+
+        else pred = QApplicationWorkflow.applicationWorkflow.wfActive.eq(true);
+
+        Page<ApplicationWorkflow> workflowPages= workflowRepo.findAll(pred, pageableRequest);
+        List<ApplicationWorkflow> wfs = workflowPages.getContent();
+        Type listType = new TypeToken<List<AppResponse>>() {}.getType();
+        return  new ModelMapper().map(wfs, listType);
     }
 
 

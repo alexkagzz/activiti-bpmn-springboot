@@ -1,6 +1,7 @@
 package com.activitibpmnjava.demo.controller;
 
 import com.activitibpmnjava.demo.dto.*;
+import com.activitibpmnjava.demo.exception.WorkflowException;
 import com.activitibpmnjava.demo.model.request.AppRequest;
 import com.activitibpmnjava.demo.model.request.UserRegistrationRequest;
 import com.activitibpmnjava.demo.model.response.AppResponse;
@@ -18,6 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -155,7 +157,9 @@ public class MyRestController {
         return ResponseEntity.ok(response);
     }
 
-    @RequestMapping(value = "/dochistory/{businessKey}", method = RequestMethod.GET)
+    @GetMapping(value = "/dochistory/{businessKey}",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<WfTaskDTO>> getDocHistory(@PathVariable("businessKey") String businessKey) {
         List<WfTaskDTO> history = workflowService.getTransactionHistory(businessKey);
         return new ResponseEntity<>(history, HttpStatus.OK);
@@ -176,6 +180,25 @@ public class MyRestController {
         variables.put("approved", appRequest.getApproved());
         String docType = WorkflowDocType.HELLO_DOCUMENT.getFileName();
         workflowService.completeTask(docType, variables, wfCurrTrans, wfCurrTrans);
+    }
+
+    @PostMapping(value = { "reaassigneeTicket" },
+            consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public void reaassignUser(AssigneeForm assigneeForm) throws WorkflowException {
+        String businessKey = assigneeForm.getBusinessKey();
+        String username = assigneeForm.getUsername();
+        workflowService.assignTask(businessKey, username);
+    }
+
+    @GetMapping(value = {"tickets"},
+            consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public List<AppResponse> getUserPolTrans(@RequestParam(value = "taskId", required = false) String taskId,
+                                             @RequestParam(value = "transCode", required = false) String transCode,
+                                             @RequestParam(value = "userName", required = false) String userName,
+                                             @RequestParam(value = "page",defaultValue = "1") int page,
+                                             @RequestParam(value = "limit",defaultValue = "10") int limit) {
+        return workflowService.findSearchTickets(taskId, transCode, userName, page, limit);
     }
 
 }

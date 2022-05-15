@@ -18,4 +18,6 @@ public interface WorkflowService {
     List<WfTaskDTO> getTransactionHistory(String businessKey);
 
     void assignTask(String businessKey,String username ) throws WorkflowException;
+
+    public List<AppResponse> findSearchTickets(String taskId, String transCode, String userName, int page, int limit);
 }
